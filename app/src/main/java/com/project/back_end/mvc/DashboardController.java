@@ -1,30 +1,67 @@
 package com.project.back_end.mvc;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import com.project.back_end.services.Service;
+
+import org.springframework.web.bind.annotation.GetMapping;
+
+/**
+ * MVC Controller for role-based dashboards.
+ * Returns Thymeleaf view names (not JSON).
+ */
+@Controller
 public class DashboardController {
 
-// 1. Set Up the MVC Controller Class:
-//    - Annotate the class with `@Controller` to indicate that it serves as an MVC controller returning view names (not JSON).
-//    - This class handles routing to admin and doctor dashboard pages based on token validation.
+    private final Service sharedService;
 
+    /**
+     * Autowire the shared service that provides token validation logic.
+     */
+    @Autowired
+    public DashboardController(Service sharedService) {
+        this.sharedService = sharedService;
+    }
 
-// 2. Autowire the Shared Service:
-//    - Inject the common `Service` class, which provides the token validation logic used to authorize access to dashboards.
+    /**
+     * Admin Dashboard:
+     * GET /adminDashboard/{token}
+     * - Validates token for "admin" role.
+     * - If valid => returns "admin/adminDashboard" Thymeleaf view.
+     * - If invalid => redirects to root (login/home).
+     */
+    @GetMapping("/adminDashboard/{token}")
+    public String adminDashboard(@PathVariable("token") String token, Model model) {
+        boolean valid = sharedService.validateTokenForRole(token, "admin");
+        if (!valid) {
+            return "redirect:/";
+        }
+        // Optional: add attributes for Thymeleaf template
+        model.addAttribute("role", "admin");
+        model.addAttribute("username", sharedService.extractUsername(token));
+        return "admin/adminDashboard";
+    }
 
-
-// 3. Define the `adminDashboard` Method:
-//    - Handles HTTP GET requests to `/adminDashboard/{token}`.
-//    - Accepts an admin's token as a path variable.
-//    - Validates the token using the shared service for the `"admin"` role.
-//    - If the token is valid (i.e., no errors returned), forwards the user to the `"admin/adminDashboard"` view.
-//    - If invalid, redirects to the root URL, likely the login or home page.
-
-
-// 4. Define the `doctorDashboard` Method:
-//    - Handles HTTP GET requests to `/doctorDashboard/{token}`.
-//    - Accepts a doctor's token as a path variable.
-//    - Validates the token using the shared service for the `"doctor"` role.
-//    - If the token is valid, forwards the user to the `"doctor/doctorDashboard"` view.
-//    - If the token is invalid, redirects to the root URL.
-
-
+    /**
+     * Doctor Dashboard:
+     * GET /doctorDashboard/{token}
+     * - Validates token for "doctor" role.
+     * - If valid => returns "doctor/doctorDashboard" Thymeleaf view.
+     * - If invalid => redirects to root (login/home).
+     */
+    @GetMapping("/doctorDashboard/{token}")
+    public String doctorDashboard(@PathVariable("token") String token, Model model) {
+        boolean valid = sharedService.validateTokenForRole(token, "doctor");
+        if (!valid) {
+            return "redirect:/";
+        }
+               // Optional: add attributes for Thymeleaf template
+        model.addAttribute("role", "doctor");
+        model.addAttribute("username", sharedService.extractUsername(token));
+        model.addAttribute("doctorId", sharedService.extractPrincipalId(token)); // if applicable
+        return "doctor/doctorDashboard";
+    }
 }
