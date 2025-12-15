@@ -1,56 +1,133 @@
 package com.project.back_end.models;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+/**
+ * Prescription document
+ *
+ * Represents a prescription stored in MongoDB.
+ * Mapped to the "prescriptions" collection using Spring Data MongoDB.
+ *
+ * Validations:
+ * - patientName: not null, length 3..100
+ * - appointmentId: not null
+ * - medication: not null, length 3..100
+ * - dosage: not null
+ * - doctorNotes: max length 200 (optional)
+ */
+@Document(collection = "prescriptions")
 public class Prescription {
 
-  // @Document annotation:
-//    - Marks the class as a MongoDB document (a collection in MongoDB).
-//    - The collection name is specified as "prescriptions" to map this class to the "prescriptions" collection in MongoDB.
+    // 1) Primary Key
+    /**
+     * Unique identifier for each prescription (MongoDB ObjectId as String).
+     * Spring Data will map to/from ObjectId automatically when using String.
+     */
+    @Id
+    private String id;
 
-// 1. 'id' field:
-//    - Type: private String
-//    - Description:
-//      - Represents the unique identifier for each prescription.
-//      - The @Id annotation marks it as the primary key in the MongoDB collection.
-//      - The id is of type String, which is commonly used for MongoDB's ObjectId as it stores IDs as strings in the database.
+    // 2) Patient name
+    /**
+     * Name of the patient receiving the prescription.
+     * Required and must be between 3 and 100 characters.
+     */
+    @NotNull
+    @Size(min = 3, max = 100)
+    private String patientName;
 
-// 2. 'patientName' field:
-//    - Type: private String
-//    - Description:
-//      - Represents the name of the patient receiving the prescription.
-//      - The @NotNull annotation ensures that the patient name is required.
-//      - The @Size(min = 3, max = 100) annotation ensures that the name length is between 3 and 100 characters, ensuring a reasonable name length.
+    // 3) Appointment id (link to SQL appointment record)
+    /**
+     * Associated appointment ID where the prescription was given.
+     * Required.
+     */
+    @NotNull
+    private Long appointmentId;
 
-// 3. 'appointmentId' field:
-//    - Type: private Long
-//    - Description:
-//      - Represents the ID of the associated appointment where the prescription was given.
-//      - The @NotNull annotation ensures that the appointment ID is required for the prescription.
+    // 4) Medication
+    /**
+     * Medication name.
+     * Required and must be between 3 and 100 characters.
+     */
+    @NotNull
+    @Size(min = 3, max = 100)
+    private String medication;
 
-// 4. 'medication' field:
-//    - Type: private String
-//    - Description:
-//      - Represents the medication prescribed to the patient.
-//      - The @NotNull annotation ensures that the medication name is required.
-//      - The @Size(min = 3, max = 100) annotation ensures that the medication name is between 3 and 100 characters, which ensures meaningful medication names.
+    // 5) Dosage
+    /**
+     * Dosage information for the medication.
+     * Required.
+     */
+    @NotNull
+    private String dosage;
 
-// 5. 'dosage' field:
-//    - Type: private String
-//    - Description:
-//      - Represents the dosage information for the prescribed medication.
-//      - The @NotNull annotation ensures that the dosage information is provided.
+    // 6) Doctor notes
+    /**
+     * Optional additional notes/instructions from the doctor.
+     * Max length 200 characters.
+     */
+    @Size(max = 200)
+    private String doctorNotes;
 
-// 6. 'doctorNotes' field:
-//    - Type: private String
-//    - Description:
-//      - Represents any additional notes or instructions from the doctor regarding the prescription.
-//      - The @Size(max = 200) annotation ensures that the doctor's notes do not exceed 200 characters, providing a reasonable limit for additional notes.
+    // 7) Constructors
 
-// 7. Constructors:
-//    - The class includes a no-argument constructor (default constructor) and a parameterized constructor that initializes the fields: patientName, medication, dosage, doctorNotes, and appointmentId.
+    /** No-argument constructor required by frameworks. */
+    public Prescription() {
+    }
 
-// 8. Getters and Setters:
-//    - Standard getter and setter methods are provided for all fields: id, patientName, medication, dosage, doctorNotes, and appointmentId.
-//    - These methods allow access and modification of the fields of the Prescription class.
+    /**
+     * Convenience constructor to initialize required fields.
+     *
+     * @param patientName  patient name (3..100 chars)
+     * @param medication   medication name (3..100 chars)
+     * @param dosage       dosage info (not null)
+     * @param doctorNotes  optional notes (<= 200 chars)
+     * @param appointmentId associated appointment id (not null)
+     */
+    public Prescription(String patientName,
+                        String medication,
+                        String dosage,
+                        String doctorNotes,
+                        Long appointmentId) {
+        this.patientName = patientName;
+        this.medication = medication;
+        this.dosage = dosage;
+        this.doctorNotes = doctorNotes;
+        this.appointmentId = appointmentId;
+    }
 
+    // 8) Getters and Setters
 
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getPatientName() { return patientName; }
+    public void setPatientName(String patientName) { this.patientName = patientName; }
+
+    public Long getAppointmentId() { return appointmentId; }
+    public void setAppointmentId(Long appointmentId) { this.appointmentId = appointmentId; }
+
+    public String getMedication() { return medication; }
+    public void setMedication(String medication) { this.medication = medication; }
+
+    public String getDosage() { return dosage; }
+    public void setDosage(String dosage) { this.dosage = dosage; }
+
+    public String getDoctorNotes() { return doctorNotes; }
+    public void setDoctorNotes(String doctorNotes) { this.doctorNotes = doctorNotes; }
+
+    @Override
+    public String toString() {
+        return "Prescription{" +
+                "id='" + id + '\'' +
+                ", patientName='" + patientName + '\'' +
+                ", appointmentId=" + appointmentId +
+                ", medication='" + medication + '\'' +
+                ", dosage='" + dosage + '\'' +
+                ", doctorNotes='" + doctorNotes + '\'' +
+                "}";
+    }
 }
