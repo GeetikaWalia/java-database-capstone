@@ -1,54 +1,112 @@
-/*
-  Import getAllAppointments to fetch appointments from the backend
-  Import createPatientRow to generate a table row for each patient appointment
 
+// /pages/doctorDashboard.js
+import { renderHeader } from '/components/header.js';
+import { openModal, closeModal, bindModalClose } from '/components/modal.js';
+import { doctorService } from '/services/doctorService.js';
+import { patientService } from '/services/patientService.js';
+import { debounce, formatDateTime } from '/utils/common.js';
 
-  Get the table body where patient rows will be added
-  Initialize selectedDate with today's date in 'YYYY-MM-DD' format
-  Get the saved token from localStorage (used for authenticated API calls)
-  Initialize patientName to null (used for filtering by name)
+const state = {
+  doctorId: null,
+  appointments: [],
+  filtered: [],
+  filters: {
+    searchPatient: '',
+    date: ''
+  }
+};
 
+async function init() {
+  renderHeader('DOCTOR');
+  bindControls();
+  bindModalClose('#prescriptionsModal');
 
-  Add an 'input' event listener to the search bar
-  On each keystroke:
-    - Trim and check the input value
-    - If not empty, use it as the patientName for filtering
-    - Else, reset patientName to "null" (as expected by backend)
-    - Reload the appointments list with the updated filter
+  // derive doctorId from token / profile
+  state.doctorId = await doctorService.getMyProfileId();
+  await loadAppointments();
+  applyFiltersAndRender();
+}
 
+function bindControls() {
+  const searchEl = document.getElementById('appointmentSearchInput');
+  const dateEl = document.getElementById('dateFilter');
 
-  Add a click listener to the "Today" button
-  When clicked:
-    - Set selectedDate to today's date
-    - Update the date picker UI to match
-    - Reload the appointments for today
+  searchEl.addEventListener('input', debounce((e) => {
+    state.filters.searchPatient = e.target.value.trim().toLowerCase();
+    applyFiltersAndRender();
+  }, 200));
 
+  dateEl.addEventListener('change', (e) => {
+    state.filters.date = e.target.value; // "YYYY-MM-DD"
+    applyFiltersAndRender();
+  });
+}
 
-  Add a change event listener to the date picker
-  When the date changes:
-    - Update selectedDate with the new value
-    - Reload the appointments for that specific date
+async function loadAppointments(force = false) {
+  state.appointments = await doctorService.getAppointments(state.doctorId, { force });
+}
 
+function applyFiltersAndRender() {
+  const { searchPatient, date } = state.filters;
+  let list = [...state.appointments];
 
-  Function: loadAppointments
-  Purpose: Fetch and display appointments based on selected date and optional patient name
+  if (searchPatient) {
+    list = list.filter(a => (a.patient?.fullName || a.patient?.name || '')
+      .toLowerCase().includes(searchPatient));
+  }
+  if (date) {
+    list = list.filter(a => (a.appointmentTime || '').slice(0, 10) === date);
+  }
 
-  Step 1: Call getAllAppointments with selectedDate, patientName, and token
-  Step 2: Clear the table body content before rendering new rows
+  state.filtered = list;
+  renderAppointments(list);
+}
 
-  Step 3: If no appointments are returned:
-    - Display a message row: "No Appointments found for today."
+function renderAppointments(list) {
+  const container = document.getElementById('appointmentsList');
+  container.innerHTML = '';
+  if (!list.length) {
+    container.innerHTML = `<p class="empty">No appointments found.</p>`;
+    return;
+  }
+  list.forEach(a => {
+    const item = document.createElement('div');
+    item.className = 'appointment-item';
+    item.innerHTML = `
+      <div class="left">
+        <div class="patient">${a.patient?.fullName || 'Unknown Patient'}</div>
+        <div class="time">${formatDateTime(a.appointmentTime)}</div>
+      </div>
+      <div class="right">
+        <button class="btn" data-view-presc>View Prescriptions</button>
+      </div>
+    `;
+    item.querySelector('[data-view-presc]').addEventListener('click', () => viewPrescriptions(a.patient?.id));
+    container.appendChild(item);
+  });
+}
 
-  Step 4: If appointments exist:
-    - Loop through each appointment and construct a 'patient' object with id, name, phone, and email
-    - Call createPatientRow to generate a table row for the appointment
-    - Append each row to the table body
+async function viewPrescriptions(patientId) {
+  if (!patientId) return;
+  const prescriptions = await patientService.getPrescriptions(patientId);
+  const body = document.getElementById('prescriptionsBody');
+  body.innerHTML = '';
 
-  Step 5: Catch and handle any errors during fetch:
-    - Show a message row: "Error loading appointments. Try again later."
+  if (!prescriptions.length) {
+    body.innerHTML = `<p class="empty">No prescriptions found.</p>`;
+  } else {
+    prescriptions.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'prescription-card';
+      div.innerHTML = `
+        <div><strong>Medication:</strong> ${p.medication}</div>
+        <div><strong>Dosage:</strong> ${p.dosage || '-'}</div>
+        <div><strong>Notes:</strong> ${p.doctorNotes || '-'}</div>
+        <div><strong>Appointment #:</strong> ${p.appointmentId}</div>
+      `;
+      body.appendChild(div);
+    });
+  }
+  openModal('#prescriptionsModal');
+}
 
-
-  When the page is fully loaded (DOMContentLoaded):
-    - Call renderContent() (assumes it sets up the UI layout)
-    - Call loadAppointments() to display today's appointments by default
-*/

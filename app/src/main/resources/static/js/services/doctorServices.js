@@ -1,53 +1,49 @@
-/*
-  Import the base API URL from the config file
-  Define a constant DOCTOR_API to hold the full endpoint for doctor-related actions
 
+// /services/doctorService.js
+const BASE = '/api';
 
-  Function: getDoctors
-  Purpose: Fetch the list of all doctors from the API
+function authHeader() {
+  const token = localStorage.getItem('token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
 
-   Use fetch() to send a GET request to the DOCTOR_API endpoint
-   Convert the response to JSON
-   Return the 'doctors' array from the response
-   If there's an error (e.g., network issue), log it and return an empty array
+export const doctorService = {
+  cache: { doctors: null, myProfileId: null },
 
+  async getAll(force = false) {
+    if (!force && this.cache.doctors) return this.cache.doctors;
+    const res = await fetch(`${BASE}/doctors`, { headers: { 'Content-Type': 'application/json', ...authHeader() } });
+    if (!res.ok) throw new Error('Failed to fetch doctors');
+    const json = await res.json();
+    this.cache.doctors = json;
+    return json;
+  },
 
-  Function: deleteDoctor
-  Purpose: Delete a specific doctor using their ID and an authentication token
+  async createDoctor(payload) {
+    const res = await fetch(`${BASE}/doctors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to create doctor');
+    return res.json();
+  },
 
-   Use fetch() with the DELETE method
-    - The URL includes the doctor ID and token as path parameters
-   Convert the response to JSON
-   Return an object with:
-    - success: true if deletion was successful
-    - message: message from the server
-   If an error occurs, log it and return a default failure response
+  async getMyProfileId() {
+    if (this.cache.myProfileId) return this.cache.myProfileId;
+    const res = await fetch(`${BASE}/doctors/me`, { headers: { ...authHeader() } });
+    if (!res.ok) throw new Error('Failed to fetch doctor profile');
+    const me = await res.json();
+    this.cache.myProfileId = me.id;
+    return me.id;
+  },
 
-
-  Function: saveDoctor
-  Purpose: Save (create) a new doctor using a POST request
-
-   Use fetch() with the POST method
-    - URL includes the token in the path
-    - Set headers to specify JSON content type
-    - Convert the doctor object to JSON in the request body
-
-   Parse the JSON response and return:
-    - success: whether the request succeeded
-    - message: from the server
-
-   Catch and log errors
-    - Return a failure response if an error occurs
-
-
-  Function: filterDoctors
-  Purpose: Fetch doctors based on filtering criteria (name, time, and specialty)
-
-   Use fetch() with the GET method
-    - Include the name, time, and specialty as URL path parameters
-   Check if the response is OK
-    - If yes, parse and return the doctor data
-    - If no, log the error and return an object with an empty 'doctors' array
-
-   Catch any other errors, alert the user, and return a default empty result
-*/
+  async getAppointments(doctorId, { date, force } = {}) {
+    const q = new URLSearchParams();
+    q.set('doctorId', doctorId);
+    if (date) q.set('date', date);
+    const res = await fetch(`${BASE}/appointments?${q}`, { headers: { ...authHeader() } });
+    if (!res.ok) throw new Error('Failed to fetch appointments');
+    return res.json();
+  }
+};
