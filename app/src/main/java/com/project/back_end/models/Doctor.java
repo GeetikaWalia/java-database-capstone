@@ -18,28 +18,44 @@ public class Doctor {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
-    @Size(max = 100)
-    @Column(name = "full_name", nullable = false, length = 100)
+    @NotNull
+    @Size(min = 3, max = 100)
     private String name;
 
-    @NotBlank
-    @Size(max = 100)
-    @Column(name = "specialty", nullable = false, length = 100)
+    @NotNull
+    @Size(min = 3, max = 50)
     private String specialty;
 
-    @ElementCollection
-    @CollectionTable(name = "doctor_availability", joinColumns = @JoinColumn(name = "doctor_id"))
-    private List<TimeSlot> availableTimes = new ArrayList<>();
+    @NotNull
+    @Email
+    private String email;
 
+    @NotNull
+    @Size(min = 6)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String password;
+
+    @NotNull
+    @Pattern(regexp = "^[0-9]{10}$")
+    private String phone;
+
+    @ElementCollection
+    private List<String> availableTimes; // e.g., ["09:00-10:00", "10:00-11:00"]
+
+    // Default constructor
     public Doctor() {}
 
-    public Doctor(Long id, String name, String specialty) {
-        this.id = id;
+    // Parameterized constructor
+    public Doctor(String name, String specialty, String email, String password, String phone, List<String> availableTimes) {
         this.name = name;
         this.specialty = specialty;
+        this.email = email;
+        this.password = password;
+        this.phone = phone;
+        this.availableTimes = availableTimes;
     }
 
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -49,45 +65,15 @@ public class Doctor {
     public String getSpecialty() { return specialty; }
     public void setSpecialty(String specialty) { this.specialty = specialty; }
 
-    public List<TimeSlot> getAvailableTimes() { return availableTimes; }
-    public void setAvailableTimes(List<TimeSlot> availableTimes) { this.availableTimes = availableTimes; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    @Embeddable
-    public static class TimeSlot {
-        @NotNull
-        @Enumerated(EnumType.STRING)
-        @Column(name = "weekday", nullable = false, length = 10)
-        private DayOfWeek weekday;
+    public String getPassword() { return password; }
+   public void getPassword(String password) { this.password = password; }
 
-        @NotNull
-        @Column(name = "start_time", nullable = false)
-        private LocalTime startTime;
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
-        @NotNull
-        @Column(name = "end_time", nullable = false)
-        private LocalTime endTime;
-
-        public TimeSlot() {}
-
-        public TimeSlot(DayOfWeek weekday, LocalTime startTime, LocalTime endTime) {
-            this.weekday = weekday;
-            this.startTime = startTime;
-            this.endTime = endTime;
-        }
-
-               public DayOfWeek getWeekday() { return weekday; }
-        public void setWeekday(DayOfWeek weekday) { this.weekday = weekday; }
-
-        public LocalTime getStartTime() { return startTime; }
-        public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
-
-        public LocalTime getEndTime() { return endTime; }
-        public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
-
-        @AssertTrue(message = "endTime must be after startTime")
-        public boolean isValidTimeRange() {
-            if (startTime == null || endTime == null) return true; // NotNull handles null
-            return endTime.isAfter(startTime);
-        }
-    }
+    public List<String> getAvailableTimes() { return availableTimes; }
+    public void setAvailableTimes(List<String> availableTimes) { this.availableTimes = availableTimes; }
 }
